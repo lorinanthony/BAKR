@@ -61,19 +61,20 @@ X_test = X[-train.idc,]; y_test = as.numeric(y[-train.idc])
   
 ### Create the Approximate Kernel ###
 n = dim(X_train)[1]; p = dim(X_train)[2]
-G_tilde = GetApproxKernel(t(X_train),1e4)
+K_tilde = GetApproxKernel(t(X_train),1e4)
   
 v=matrix(1, n, 1)
 M=diag(n)-v%*%t(v)/n
-Gn=M%*%G_tilde%*%M
-Gn=Gn/mean(diag(Gn))
+Kn=M%*%K_tilde%*%M
+Kn=Kn/mean(diag(Kn))
   
-evd = eigen(Gn)
+evd = eigen(Kn)
 ### Choose the number of components that explain 99.995% of the cumulative variance in the data ###
 explained_var = cumsum(evd$values/sum(evd$values))
 q = 1:min(which(explained_var >= 0.75))
 Lambda = diag(evd$values[q]^(-1)) # Matrix of Eigenvalues
 U = evd$vectors[,q] # Unitary Matrix of Eigenvectors
+
 ### Define Inverse Mapping ###
 B = InverseMap(t(X_train),U)
   
@@ -83,7 +84,7 @@ burn = 5e3
   
 ### Run BAKR ###
 Gibbs = BAKRGibbs(U,y_train,Lambda,iter,burn)
-beta.out = PostBeta(B,as.numeric(PostMean(Gibbs$alpha)))
+beta.out = PostBeta(B,as.numeric(PostMean(Gibbs$theta)))
 BAKR_pred = BAKRPredict(t(X_test),beta.out)
   
 ### Get Diagnostics ###
