@@ -6,6 +6,9 @@ using namespace arma;
 
 // [[Rcpp::depends(RcppArmadillo)]]
 
+//================================================================================================
+//(1) Listed below are wrapper functions to sample from different distributions
+
 // [[Rcpp::export]]
 //random multivariate normal sample generator using RcppArmadillo
 arma::mat mvrnormArma(int n, arma::vec mu, arma::mat sigma) {
@@ -33,106 +36,6 @@ double rScaledInvChiSq(int n, double nu, double tau2){
 }
 
 // [[Rcpp::export]]
-List BAKRGibbs(mat U, vec y, mat Lambda, int iter = 5000, int burn = 1000, double g = 1, double nu_alpha = 2, double phi_alpha = 1, double nu_e = 2, double phi_e = 1){
-    
-    int i;
-    double q = U.n_cols;
-    double n = U.n_rows;
-    mat alphamat = zeros<mat>(iter-burn, q);
-    vec sigma_e_vec = zeros(iter-burn), sigma_alpha_vec = zeros(iter-burn);
-    
-    // The rest of the code follows the R version
-    rowvec alpha = zeros<rowvec>(q);
-    double sigma_alpha = 0.5, sigma_e = 0.5;
-    mat I_q(q,q); I_q.eye();
-    arma::mat SS;
-    
-    for (i=0; i<iter; i++) {
-        SS = inv(diagmat(sigma_e*Lambda+sigma_alpha*g*I_q));
-        alpha = mvrnormArma(1,sigma_alpha*g*SS*trans(U)*y, (sigma_e*sigma_alpha*g)*SS);
-        
-        sigma_alpha = rScaledInvChiSq(1,nu_alpha + q,(1.0/(nu_alpha + q))*(nu_alpha*phi_alpha+as_scalar(alpha*Lambda*trans(alpha))/g));
-        
-        sigma_e = rScaledInvChiSq(1,nu_e + n,(1.0/(nu_e + n))*(nu_e*phi_e+as_scalar(trans(y - U*trans(alpha))*(y - U*trans(alpha)))));
-        
-        if(i>=burn){
-            alphamat.row(i-burn) = alpha;
-            sigma_alpha_vec(i-burn) = sigma_alpha;
-            sigma_e_vec(i-burn) = sigma_e;
-        }
-    }
-    return Rcpp::List::create(Rcpp::Named("alpha") = alphamat, Rcpp::Named("sigmaE") = sigma_e_vec, Rcpp::Named("sigmaA") = sigma_alpha_vec);
-}
-
-// [[Rcpp::export]]
-arma::rowvec PostMean(arma::mat postdraws){
-  arma::rowvec x = mean(postdraws);
-  return x;
-}
-
-// [[Rcpp::export]]
-arma::vec PostBeta(arma::mat GAMMA, arma::vec alpha){
-  return GAMMA*alpha;
-}
-
-// [[Rcpp::export]]
-arma::mat GetBeta(arma::mat GAMMA, arma::mat alphamat){
-  int i;
-  mat betamat(GAMMA.n_rows,alphamat.n_rows);
-  for(i=0; (unsigned)i<betamat.n_cols; i++){
-    betamat.col(i) = GAMMA*trans(alphamat.row(i));
-  }
-  return trans(betamat);
-}
-
-// [[Rcpp::export]]
-arma::mat GetApproxKernel(arma::mat X, double iter){
-  int i;
-  double ncov = X.n_rows, samp_size = X.n_cols;
-  mat zeta(iter,samp_size);
-  for(i = 0; i<iter; i++){
-    vec omega = arma::randn(ncov)*sqrt(2/ncov);
-    vec b = runif(1,0,2*datum::pi);
-    zeta.row(i) = sqrt(2/iter)*cos(trans(omega)*X+as_scalar(b));
-  }
-  mat K_hat = zeta.t()*zeta;
-  return K_hat;
-}
-
-// [[Rcpp::export]]
-arma::mat GetGaussKernel(arma::mat X, double h = 1){
-    int i,j;
-    double n = X.n_cols;
-    double p = X.n_rows;
-    mat K = zeros<mat>(n,n);
-    for (i = 0; i<n; i++){
-        for(j = 0; j<n; j++){
-            if(i==j){
-                break;
-            }
-            else{
-                K(i,j) = exp(-h/(p)*sum(pow(X.col(i)-X.col(j),2)));
-            }
-        }
-    }
-    return K + trans(K);
-}
-
-
-// [[Rcpp::export]]
-arma::mat GetLinearKernel(arma::mat X){
-    double p = X.n_rows;
-    return trans(X)*X/p;
-}
-
-// [[Rcpp::export]]
-arma::mat InverseMap(arma::mat X, arma::mat U){
-    mat X_t = trans(X);
-    mat GAMMA = pinv(X_t,1.490116e-08)*U;
-    return GAMMA;
-}
-
-// [[Rcpp::export]]
 double median_rcpp(NumericVector x) {
   NumericVector y = clone(x);
   int n, half;
@@ -157,47 +60,6 @@ double median_rcpp(NumericVector x) {
 double mad_rcpp(NumericVector x, double scale_factor = 1.4826) {
   // scale_factor = 1.4826; default for normal distribution consistent with R
   return median_rcpp(abs(x - median_rcpp(x))) * scale_factor;
-}
-
-// [[Rcpp::export]]
-vec BAKRPredict(mat X_new, vec beta) {
-  return trans(X_new)*beta;
-}
-
-// [[Rcpp::export]]
-List BAKRSupervised(mat K, vec y, mat Sigma, int iter = 5000, int burn = 1000, double nu_alpha = 2, double phi_alpha = 1, double nu_e = 2, double phi_e = 1){
-  
-  int i;
-  double q = K.n_cols;
-  double n = K.n_rows;
-  mat alphamat = zeros<mat>(iter-burn, q);
-  mat yfitmat = zeros<mat>(iter-burn, n);
-  
-  // The rest of the code follows the R version
-  rowvec alpha = zeros<rowvec>(q);
-  double sigma_alpha = 0.5, sigma_e = 0.5;
-  mat I_q(q,q); I_q.eye();
-  
-  arma::mat Lambda = Sigma;
-  arma::mat U = K;
-  
-  for (i=0; i<iter; i++) {
-    vec yfit = U*trans(alpha);
-    vec ystar = yfit;
-    ystar(find_finite(y)) = y(find_finite(y));
-    
-    alpha = mvrnormArma(1,sigma_alpha*inv(sigma_e*inv(Lambda)+sigma_alpha*I_q)*trans(U)*ystar, (sigma_e*sigma_alpha)*inv(sigma_e*inv(Lambda)+sigma_alpha*I_q));
-    
-    sigma_alpha = rScaledInvChiSq(1,nu_alpha + q,(1.0/(nu_alpha + q))*(nu_alpha*phi_alpha+as_scalar(alpha*inv(Lambda)*trans(alpha))));
-    
-    sigma_e = rScaledInvChiSq(1,nu_e + n,(1.0/(nu_e + n))*(nu_e*phi_e+as_scalar(trans(ystar - U*trans(alpha))*(ystar - U*trans(alpha)))));
-    
-    if(i>=burn){
-      alphamat.row(i-burn) = alpha;
-      yfitmat.row(i-burn) = trans(ystar);
-    }
-  }
-  return List::create(Named("alpha") = alphamat,Named("YFit") = yfitmat);
 }
 
 // norm_rs(a, b)
@@ -349,22 +211,104 @@ double rnorm_trunc (double mu, double sigma, double lower, double upper)
     return (output);
 }
 
+//================================================================================================
+//(2) Listed below are functions to create different kernel matrices (e.g. approximate kernel, Gaussian kernel, linear or additive kernel)
+
 // [[Rcpp::export]]
-arma::mat BAKRGibbsProbit(mat U, vec y, mat Lambda, int iter = 5000, int burn = 1000, double nu_alpha = 2, double phi_alpha = 1){
+arma::mat GetApproxKernel(arma::mat X, double iter){
+    int i;
+    double ncov = X.n_rows, samp_size = X.n_cols;
+    mat zeta(iter,samp_size);
+    for(i = 0; i<iter; i++){
+        vec omega = arma::randn(ncov)*sqrt(2/ncov);
+        vec b = runif(1,0,2*datum::pi);
+        zeta.row(i) = sqrt(2/iter)*cos(trans(omega)*X+as_scalar(b));
+    }
+    mat K_hat = zeta.t()*zeta;
+    return K_hat;
+}
+
+// [[Rcpp::export]]
+arma::mat GetGaussKernel(arma::mat X, double h = 1){
+    int i,j;
+    double n = X.n_cols;
+    double p = X.n_rows;
+    mat K = zeros<mat>(n,n);
+    for (i = 0; i<n; i++){
+        for(j = 0; j<n; j++){
+            if(i==j){
+                break;
+            }
+            else{
+                K(i,j) = exp(-h/(p)*sum(pow(X.col(i)-X.col(j),2)));
+            }
+        }
+    }
+    return K + trans(K);
+}
+
+// [[Rcpp::export]]
+arma::mat GetLinearKernel(arma::mat X){
+    double p = X.n_rows;
+    return trans(X)*X/p;
+}
+
+//================================================================================================
+//(3) Listed below are the Gibbs samplers to run Bayesian approximate kernel regression (BAKR)
+
+//(i) Nonlinear regression setting for continous outcomes y
+
+// [[Rcpp::export]]
+List BAKRGibbs(mat U, vec y, mat Lambda, int iter = 5000, int burn = 1000, double nu_theta = 2, double phi_theta = 1, double nu_e = 2, double phi_e = 1){
+    
+    int i;
+    double q = U.n_cols;
+    double n = U.n_rows;
+    mat thetamat = zeros<mat>(iter-burn, q);
+    vec sigma_e_vec = zeros(iter-burn), sigma_theta_vec = zeros(iter-burn);
+    
+    // The rest of the code follows the R version
+    rowvec theta = zeros<rowvec>(q);
+    double sigma_theta = 0.5, sigma_e = 0.5;
+    mat I_q(q,q); I_q.eye();
+    arma::mat SS;
+    
+    for (i=0; i<iter; i++) {
+        SS = inv(diagmat(sigma_e*Lambda+sigma_theta*I_q));
+        theta = mvrnormArma(1,sigma_theta*SS*(trans(U)*y), (sigma_e*sigma_theta)*SS);
+        
+        sigma_theta = rScaledInvChiSq(1,nu_theta + q,(1.0/(nu_theta + q))*(nu_theta*phi_theta+as_scalar(theta*Lambda*trans(theta))));
+        
+        sigma_e = rScaledInvChiSq(1,nu_e + n,(1.0/(nu_e + n))*(nu_e*phi_e+as_scalar(trans(y - U*trans(theta))*(y - U*trans(theta)))));
+        
+        if(i>=burn){
+            thetamat.row(i-burn) = theta;
+            sigma_theta_vec(i-burn) = sigma_theta;
+            sigma_e_vec(i-burn) = sigma_e;
+        }
+    }
+    return Rcpp::List::create(Rcpp::Named("theta") = thetamat, Rcpp::Named("sigma_e") = sigma_e_vec, Rcpp::Named("sigma_theta") = sigma_theta_vec);
+}
+
+//(ii) Probit regression setting for binary outcomes y (i.e. classification)
+
+// [[Rcpp::export]]
+List BAKRProbitGibbs(mat U, vec y, mat Lambda, int iter = 5000, int burn = 1000, double nu_theta = 2, double phi_theta = 1){
     
     int i,j;
     double q = U.n_cols;
     double n = U.n_rows;
-    mat alphamat = zeros<mat>(iter-burn, q);
+    mat thetamat = zeros<mat>(iter-burn, q);
     vec S = zeros<vec>(n);
     
     // The rest of the code follows the R version
-    rowvec alpha = zeros<rowvec>(q);
-    double sigma_alpha = 0.5;
+    rowvec theta = zeros<rowvec>(q);
+    vec sigma_theta_vec = zeros(iter-burn);
+    double sigma_theta = 0.5;
     mat I_q(q,q); I_q.eye();
     
     for (i=0; i<iter; i++) {
-        vec ms = U*trans(alpha);
+        vec ms = U*trans(theta);
         
         for(j=0; j < y.n_elem; j++){
             if(y(j)==0){
@@ -375,22 +319,103 @@ arma::mat BAKRGibbsProbit(mat U, vec y, mat Lambda, int iter = 5000, int burn = 
             }
         }
         
-        alpha = mvrnormArma(1,sigma_alpha*inv(inv(Lambda)+sigma_alpha*I_q)*trans(U)*S, sigma_alpha*inv(inv(Lambda)+sigma_alpha*I_q));
+        theta = mvrnormArma(1,sigma_theta*inv(inv(Lambda)+sigma_theta*I_q)*trans(U)*S, sigma_theta*inv(inv(Lambda)+sigma_theta*I_q));
         
-        sigma_alpha = rScaledInvChiSq(1,nu_alpha + q,pow(nu_alpha + q,-1)*(nu_alpha*phi_alpha+as_scalar(alpha*inv(Lambda)*trans(alpha))));
+        sigma_theta = rScaledInvChiSq(1,nu_theta + q,pow(nu_theta + q,-1)*(nu_theta*phi_theta+as_scalar(theta*inv(Lambda)*trans(theta))));
         
         if(i>=burn){
-            alphamat.row(i-burn) = alpha;
+            thetamat.row(i-burn) = theta;
+            sigma_theta_vec(i-burn) = sigma_theta;
         }
     }
-    return alphamat;
+    return Rcpp::List::create(Rcpp::Named("theta") = thetamat, Rcpp::Named("sigma_theta") = sigma_theta_vec);
 }
 
+//(iii) Supervised version of BAKR. Nonlinear regression setting for continous outcomes y
+//The kernel matrix K has both training and testing sets included
+//The desired outcomes of y to be predicted should be encoded as NA
+
 // [[Rcpp::export]]
-NumericVector BAKRProbitPredict(NumericMatrix X_new, NumericVector beta){
-  NumericVector pred = Rcpp::pnorm(transpose(X_new)*beta,0.0,1.0,1,0);
-    return pred;
+List BAKRSupervised(mat K, vec y, mat Sigma, int iter = 5000, int burn = 1000, double nu_theta = 2, double phi_theta = 1, double nu_e = 2, double phi_e = 1){
+    
+    int i;
+    double q = K.n_cols;
+    double n = K.n_rows;
+    mat thetamat = zeros<mat>(iter-burn, q);
+    mat yfitmat = zeros<mat>(iter-burn, n);
+    vec sigma_e_vec = zeros(iter-burn), sigma_theta_vec = zeros(iter-burn);
+    
+    // The rest of the code follows the R version
+    rowvec theta = zeros<rowvec>(q);
+    double sigma_theta = 0.5, sigma_e = 0.5;
+    mat I_q(q,q); I_q.eye();
+    
+    arma::mat Lambda = Sigma;
+    arma::mat U = K;
+    
+    for (i=0; i<iter; i++) {
+        vec yfit = U*trans(theta);
+        vec ystar = yfit;
+        ystar(find_finite(y)) = y(find_finite(y));
+        
+        theta = mvrnormArma(1,sigma_theta*inv(sigma_e*inv(Lambda)+sigma_theta*I_q)*(trans(U)*ystar), (sigma_e*sigma_theta)*inv(sigma_e*inv(Lambda)+sigma_theta*I_q));
+        
+        sigma_theta = rScaledInvChiSq(1,nu_theta + q,(1.0/(nu_theta + q))*(nu_theta*phi_theta+as_scalar(theta*inv(Lambda)*trans(theta))));
+        
+        sigma_e = rScaledInvChiSq(1,nu_e + n,(1.0/(nu_e + n))*(nu_e*phi_e+as_scalar(trans(ystar - U*trans(theta))*(ystar - U*trans(theta)))));
+        
+        if(i>=burn){
+            thetamat.row(i-burn) = theta;
+            sigma_theta_vec(i-burn) = sigma_theta;
+            sigma_e_vec(i-burn) = sigma_e;
+            yfitmat.row(i-burn) = trans(ystar);
+        }
+    }
+    return List::create(Named("theta") = thetamat,Named("sigma_e") = sigma_e_vec, Named("sigma_theta") = sigma_theta_vec, Named("YFit") = yfitmat);
 }
+
+//================================================================================================
+//(4) Listed below are functions to carry out inference within the BAKR modeling framework
+
+//(i) Compute the posterior mean of Gibbs samples
+
+// [[Rcpp::export]]
+arma::rowvec PostMean(arma::mat postdraws){
+    arma::rowvec x = mean(postdraws);
+    return x;
+}
+
+//(ii) Compute the inverse mapping to retrieve the effect sizes of the original covariates (i.e. the betas)
+
+// [[Rcpp::export]]
+arma::mat InverseMap(arma::mat X, arma::mat U){
+    mat X_t = trans(X);
+    mat B = pinv(X_t,1.490116e-08)*U;
+    return B;
+}
+
+//(iii) Retrieve all of the implied Gibbs draws for the betas
+// [[Rcpp::export]]
+arma::mat GetBeta(arma::mat B, arma::mat thetamat){
+    int i;
+    mat betamat(B.n_rows,thetamat.n_rows);
+    for(i=0; (unsigned)i<betamat.n_cols; i++){
+        betamat.col(i) = B*trans(thetamat.row(i));
+    }
+    return trans(betamat);
+}
+
+//(iv) Compute the posterior mean of the betas directly using the posterior mean of the thetas
+
+// [[Rcpp::export]]
+arma::vec PostBeta(arma::mat B, arma::vec theta){
+    return B*theta;
+}
+
+//================================================================================================
+//(5) Listed below are functions to compute significance metrics and summary statistics to better do inference
+
+//(i) Local False Sign Rate (lfsr) [Stephens, M. (2016). False discovery rates: A new deal. bioRxiv.]
 
 // [[Rcpp::export]]
 vec lfsr(mat beta_mat){
@@ -410,6 +435,10 @@ vec lfsr(mat beta_mat){
     }
     return LFSR;
 }
+
+//(ii) Posterior Probability of Association Analog (PPAA)
+//The idea of hard thresholding effect sizes to determine significance (as in compressive sensing)
+//sigval = the desired significance FDR threshold
 
 // [[Rcpp::export]]
 NumericMatrix GetPPAAs(NumericMatrix betamat, double sigval){
@@ -439,4 +468,18 @@ NumericMatrix GetPPAAs(NumericMatrix betamat, double sigval){
         }
     }
     return PPAAmat;
+}
+
+//================================================================================================
+//(6) Listed below are functions to carry out prediction for BAKR in regression and classification, respectively
+
+// [[Rcpp::export]]
+vec BAKRPredict(mat X_new, vec beta) {
+    return trans(X_new)*beta;
+}
+
+// [[Rcpp::export]]
+NumericVector BAKRProbitPredict(NumericMatrix X_new, NumericVector beta){
+    NumericVector pred = Rcpp::pnorm(transpose(X_new)*beta,0.0,1.0,1,0);
+    return pred;
 }
