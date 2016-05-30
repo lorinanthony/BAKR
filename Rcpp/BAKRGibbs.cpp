@@ -336,11 +336,11 @@ List BAKRProbitGibbs(mat U, vec y, mat Lambda, int iter = 5000, int burn = 1000,
 //The desired outcomes of y to be predicted should be encoded as NA
 
 // [[Rcpp::export]]
-List BAKRSupervised(mat K, vec y, mat Sigma, int iter = 5000, int burn = 1000, double nu_theta = 2, double phi_theta = 1, double nu_e = 2, double phi_e = 1){
+List BAKRSupervised(mat U, vec y, mat Lambda, int iter = 5000, int burn = 1000, double nu_theta = 2, double phi_theta = 1, double nu_e = 2, double phi_e = 1){
     
     int i;
-    double q = K.n_cols;
-    double n = K.n_rows;
+    double q = U.n_cols;
+    double n = U.n_rows;
     mat thetamat = zeros<mat>(iter-burn, q);
     mat yfitmat = zeros<mat>(iter-burn, n);
     vec sigma_e_vec = zeros(iter-burn), sigma_theta_vec = zeros(iter-burn);
@@ -349,9 +349,6 @@ List BAKRSupervised(mat K, vec y, mat Sigma, int iter = 5000, int burn = 1000, d
     rowvec theta = zeros<rowvec>(q);
     double sigma_theta = 0.5, sigma_e = 0.5;
     mat I_q(q,q); I_q.eye();
-    
-    arma::mat Lambda = Sigma;
-    arma::mat U = K;
     
     for (i=0; i<iter; i++) {
         vec yfit = U*trans(theta);
@@ -372,6 +369,56 @@ List BAKRSupervised(mat K, vec y, mat Sigma, int iter = 5000, int burn = 1000, d
         }
     }
     return List::create(Named("theta") = thetamat,Named("sigma_e") = sigma_e_vec, Named("sigma_theta") = sigma_theta_vec, Named("YFit") = yfitmat);
+}
+
+//(iv) Mixed modeling form of BAKR. Nonlinear regression setting for contiuous outcomes y
+//Here we introduce a random effects term varphi ~ MVN(0,D) where D is a known dense covariance sructure. A standard approach in quantitative and statistical genetics is to define D as known kinship matrix which represents family relations between individuals or population structure across individuals, and is estimated from SNP data.
+//For example if varphi = Zb then D = ZZ^t (linear kernel relationship matrix)
+//This model resembels the supervised version of BAKR as often times the objective is to make inferences on a set of explanatory variables, while correcting for population structure—meaning, there is no testing set to be considered.
+//The kernel matrix K has both training and testing sets included
+//The desired outcomes of y to be predicted should be encoded as NA (if needed)
+//We include one extra outcome here and that is the posterior estimates of varphi
+
+// [[Rcpp::export]]
+List BAKRMMGibbs(mat U, vec y, mat Lambda, mat D, int iter = 5000, int burn = 1000, double nu_theta = 2, double phi_theta = 1, double nu_e = 2, double phi_e = 1){
+    
+    int i;
+    double q = U.n_cols;
+    double n = U.n_rows;
+    mat thetamat = zeros<mat>(iter-burn, q);
+    mat varphimat = zeros<mat>(iter-burn, q);
+    mat yfitmat = zeros<mat>(iter-burn, n);
+    vec sigma_e_vec = zeros(iter-burn), sigma_theta_vec = zeros(iter-burn);
+    
+    // The rest of the code follows the R version
+    rowvec theta = zeros<rowvec>(q);
+    rowvec varphi = zeros<rowvec>(q);
+    double sigma_theta = 0.5, sigma_e = 0.5;
+    mat I_q(q,q); I_q.eye();
+    mat I_n(n,n); I_n.eye();
+    
+    for (i=0; i<iter; i++) {
+        vec yfit = U*trans(theta);
+        vec ystar = yfit;
+        ystar(find_finite(y)) = y(find_finite(y));
+        
+        theta = mvrnormArma(1,sigma_theta*inv(sigma_e*inv(Lambda)+sigma_theta*I_q)*(trans(U)*(ystar-trans(varphi))), (sigma_e*sigma_theta)*inv(sigma_e*inv(Lambda)+sigma_theta*I_q));
+        
+        sigma_theta = rScaledInvChiSq(1,nu_theta + q,(1.0/(nu_theta + q))*(nu_theta*phi_theta+as_scalar(theta*inv(Lambda)*trans(theta))));
+        
+        sigma_e = rScaledInvChiSq(1,nu_e + n,(1.0/(nu_e + n))*(nu_e*phi_e+as_scalar(trans(ystar - U*trans(theta)-trans(varphi))*(ystar - U*trans(theta)-trans(varphi)))));
+        
+        varphi = mvrnormArma(1,inv(sigma_e*inv(D)+I_n)*(ystar-U*trans(theta)),sigma_e*inv(sigma_e*inv(D)+I_n));
+        
+        if(i>=burn){
+            thetamat.row(i-burn) = theta;
+            varphimat.row(i-burn) = varphi;
+            sigma_theta_vec(i-burn) = sigma_theta;
+            sigma_e_vec(i-burn) = sigma_e;
+            yfitmat.row(i-burn) = trans(ystar);
+        }
+    }
+    return List::create(Named("theta") = thetamat,Named("varphi") = varphimat,Named("sigma_e") = sigma_e_vec, Named("sigma_theta") = sigma_theta_vec, Named("YFit") = yfitmat);
 }
 
 //================================================================================================
