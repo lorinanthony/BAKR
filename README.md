@@ -1,4 +1,45 @@
 # Bayesian Approximate Kernel Regression (BAKR)
-Code and simulations using Bayesian approximate kernel regression (BAKR). The motivation for these simulations is to understand the performance of BAKR on an important question in statistical genetics: genomic selection. We use three simulation scenarios, corresponding to three types of genetic architectures, to better understand the performance of BAKR in predicting phenotypes from genotypes: (1) a linear relationship between genotype and phenotype with samples that are not related; (2) a nonlinear relationship between genotype and phenotype with unrelated individuals or observations; and (3) a linear relationship between genotype and phenotype but the individuals or observations. We show that BAKR predicts phenotypes from genotype data as well as the best nonparametric models and better than parametric models. 
+Nonlinear kernel regression models are often used in statistics and machine learning due to greater accuracy than linear models. Variable selection for kernel regression models is a challenge partly because, unlike the linear regression setting, there is no clear concept of an effect size for regression coefficients. In [Crawford et al. (2016)](http://arxiv.org/abs/1508.01217), we propose a novel framework that provides an analog of the effect size of each explanatory variable for Bayesian kernel regression models when the kernel is shift-invariant---for example the Gaussian kernel. We use function analytic properties of shift-invariant reproducing kernel Hilbert spaces (RKHS) to define a linear vector space that (1) captures nonlinear structure and (2) can be projected onto the original explanatory variables. The projection onto the original explanatory variables serves as the analog of effect sizes. The specific function analytic property we use is that shift-invariant kernel functions can be approximated via random Fourier bases. Based on the random Fourier expansion we propose a computationally efficient class of Bayesian approximate kernel regression (BAKR) models for both nonlinear regression and binary classification for which one can compute an analog of effect sizes. By adapting some classical results in compressive sensing we state conditions under which BAKR can recover a sparse set of effect sizes, (i.e.\! simultaneous variable selection and regression). We illustrate the utility of BAKR by examining, in some detail, two important problems in statistical genetics: genomic selection (predicting phenotype from genotype) and association mapping (inference of significant variables or loci). State-of-the-art methods for genomic selection and association mapping are based on kernel regression and linear models, respectively. BAKR is the first method that is competitive in both settings. An observation relevant to genetics is that BAKR and nonlinear regression models tend to have greater advantage over linear models when the observed samples are related.
 
-See http://arxiv.org/abs/1508.01217 for more details.
+BAKR is implemented as a set of R and C++ routines, which can be carried out within an R environment.
+
+
+### The R Environment
+R is a widely used, free, and open source software environment for statistical computing and graphics. The most recent version of R can be downloaded from the 
+[Comprehensive R Archive Network (CRAN)](http://cran.r-project.org/)
+CRAN provides precompiled binary versions of R for Windows, MacOS, and select Linux distributions that are likely sufficient for many users' needs.  Users can also install R from source code;  however, this may require a significant amount of effort.  For specific details on how to compile, install, and manage R and R-packages, refer to the manual [R Installation and Administration](http://cran.r-project.org/doc/manuals/r-release/R-admin.html).
+
+
+### R Packages Required for BAKR
+The BAKR tutorial requires the installation of the following R libraries:
+
+[coda](https://cran.r-project.org/web/packages/coda/index.html)
+
+[doParallel](https://cran.r-project.org/web/packages/doParallel/index.html)
+
+[Rcpp](https://cran.r-project.org/web/packages/Rcpp/index.html)
+
+[RcppArmadillo](https://cran.r-project.org/web/packages/RcppArmadillo/index.html)
+
+[MASS](https://cran.r-project.org/web/packages/MASS/index.html)
+
+[BGLR](https://cran.r-project.org/web/packages/BGLR/index.html)
+
+The easiest method to install these packages is with the following example command entered in an R shell:
+
+    install.packages("coda", dependecies = TRUE)
+
+Alternatively, one can also [install R packages from the command line]
+                             (http://cran.r-project.org/doc/manuals/r-release/R-admin.html#Installing-packages).
+
+
+### Tutorial for Running BAKR
+The simulation tutorial provided here is based on a simple (and small) genetics example where we simulate genotype data for n = 500 individuals with p = 2000 measured SNPs. We will randomly select a small number (e.g. 25) of these SNPs to be causal and have true association with the generated (continuous) phenotype y. In this script we walk through the basic functions of BAKR. Specifically it shows how to: (1) compute the approximate Kernel matrix and its singular value decomposition form; (2) run the Gibbs Sampler for BAKR; (3) retrieve the beta estimates for the original variants/genes/obeserved variables; (4) conduct inference and/or out-of-sample prediction.
+
+This script also notes how functions change when the variables are binary instead of continuous.
+
+### Questions and Feedback
+For questions or concerns with the BAKR functions, please contact
+[Lorin Crawford](mailto:lac55@stat.duke.edu), [Xiang Zhou](mailto:xzhousph@umich.edu), or [Sayan Mukherjee](mailto:sayan@stat.duke.edu).
+
+We appreciate any feedback you may have with our repository and instructions.
