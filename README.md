@@ -32,6 +32,12 @@ The easiest method to install these packages is with the following example comma
 Alternatively, one can also [install R packages from the command line]
                              (http://cran.r-project.org/doc/manuals/r-release/R-admin.html#Installing-packages).
 
+### C++ Functions Required for BAKR
+The code in this repository assumes that basic C++ functions and applications are already set up on the running personal computer or cluster. If not, the BAKR functions and necessary Rcpp packages will not work properly. A simple option is to use [gcc] (https://gcc.gnu.org/). macOS users may use this collection by installing the [Homebrew package manager](http://brew.sh/index.html) and then typing the following into the terminal:
+
+brew install gcc
+
+For extra tips on how to run C++ on macOS, please visit [here](http://seananderson.ca/2013/11/18/rcpp-mavericks.html). For tips on how to avoid errors dealing with "-lgfortran" or "-lquadmath", please visit [here](http://thecoatlessprofessor.com/programming/rcpp-rcpparmadillo-and-os-x-mavericks-lgfortran-and-lquadmath-error/).
 
 ### Tutorial for Running BAKR
 The simulation tutorial provided here is based on a simple (and small) genetics example where we simulate genotype data for n = 500 individuals with p = 2000 measured SNPs. We will randomly select a small number (e.g. 25) of these SNPs to be causal and have true association with the generated (continuous) phenotype y. In this script we walk through the basic functions of BAKR. Specifically it shows how to: (1) compute the approximate Kernel matrix and its singular value decomposition form; (2) run the Gibbs Sampler for BAKR; (3) retrieve the beta estimates for the original variants/genes/obeserved variables; (4) conduct inference and/or out-of-sample prediction.
