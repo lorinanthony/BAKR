@@ -253,6 +253,15 @@ arma::mat GetLinearKernel(arma::mat X){
     return trans(X)*X/p;
 }
 
+// [[Rcpp::export]]
+List EigDecomp(arma::mat X){
+    mat U;
+    vec lambda;
+    mat V;
+    svd(U,lambda,V,X);
+    return Rcpp::List::create(Rcpp::Named("U") = U,Rcpp::Named("V") = V,Rcpp::Named("lambda") = lambda);
+}
+
 //================================================================================================
 //(3) Listed below are the Gibbs samplers to run Bayesian approximate kernel regression (BAKR)
 
