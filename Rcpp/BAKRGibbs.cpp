@@ -12,54 +12,54 @@ using namespace arma;
 // [[Rcpp::export]]
 //random multivariate normal sample generator using RcppArmadillo
 arma::mat mvrnormArma(int n, arma::vec mu, arma::mat sigma) {
-  int ncols = sigma.n_cols;
-  arma::mat Y = arma::randn(n, ncols);
-  return arma::repmat(mu, 1, n).t() + Y * arma::chol(sigma);
+    int ncols = sigma.n_cols;
+    arma::mat Y = arma::randn(n, ncols);
+    return arma::repmat(mu, 1, n).t() + Y * arma::chol(sigma);
 }
 
 // [[Rcpp::export]]
 double rgammadouble(int a, double b, double c){
-  Rcpp::NumericVector x = rgamma(a,b,1/c);
-  return x(0);
+    Rcpp::NumericVector x = rgamma(a,b,1/c);
+    return x(0);
 }
 
 // [[Rcpp::export]]
 double rInvGamma(int n, double shape,double scale){
-  double x = rgammadouble(n, shape, scale);
-  return 1.0/x;
+    double x = rgammadouble(n, shape, scale);
+    return 1.0/x;
 }
 
 // [[Rcpp::export]]
 double rScaledInvChiSq(int n, double nu, double tau2){
-  double x = rInvGamma(n, nu/2,(nu * tau2)/2);
-  return x;
+    double x = rInvGamma(n, nu/2,(nu * tau2)/2);
+    return x;
 }
 
 // [[Rcpp::export]]
 double median_rcpp(NumericVector x) {
-  NumericVector y = clone(x);
-  int n, half;
-  double y1, y2;
-  n = y.size();
-  half = n / 2;
-  if(n % 2 == 1) {
-    // median for odd length vector
-    std::nth_element(y.begin(), y.begin()+half, y.end());
-    return y[half];
-  } else {
-    // median for even length vector
-    std::nth_element(y.begin(), y.begin()+half, y.end());
-    y1 = y[half];
-    std::nth_element(y.begin(), y.begin()+half-1, y.begin()+half);
-    y2 = y[half-1];
-    return (y1 + y2) / 2.0;
-  }
+    NumericVector y = clone(x);
+    int n, half;
+    double y1, y2;
+    n = y.size();
+    half = n / 2;
+    if(n % 2 == 1) {
+        // median for odd length vector
+        std::nth_element(y.begin(), y.begin()+half, y.end());
+        return y[half];
+    } else {
+        // median for even length vector
+        std::nth_element(y.begin(), y.begin()+half, y.end());
+        y1 = y[half];
+        std::nth_element(y.begin(), y.begin()+half-1, y.begin()+half);
+        y2 = y[half-1];
+        return (y1 + y2) / 2.0;
+    }
 }
 
 // [[Rcpp::export]]
 double mad_rcpp(NumericVector x, double scale_factor = 1.4826) {
-  // scale_factor = 1.4826; default for normal distribution consistent with R
-  return median_rcpp(abs(x - median_rcpp(x))) * scale_factor;
+    // scale_factor = 1.4826; default for normal distribution consistent with R
+    return median_rcpp(abs(x - median_rcpp(x))) * scale_factor;
 }
 
 // norm_rs(a, b)
@@ -215,12 +215,12 @@ double rnorm_trunc (double mu, double sigma, double lower, double upper)
 //(2) Listed below are functions to create different kernel matrices (e.g. approximate kernel, Gaussian kernel, linear or additive kernel)
 
 // [[Rcpp::export]]
-arma::mat GetApproxKernel(arma::mat X, double iter){
+arma::mat ApproxGaussKernel(arma::mat X, double iter, double h){
     int i;
     double ncov = X.n_rows, samp_size = X.n_cols;
     mat zeta(iter,samp_size);
     for(i = 0; i<iter; i++){
-        vec omega = arma::randn(ncov)*sqrt(2/ncov);
+        vec omega = arma::randn(ncov)*sqrt(2/h);
         vec b = runif(1,0,2*datum::pi);
         zeta.row(i) = sqrt(2/iter)*cos(trans(omega)*X+as_scalar(b));
     }
@@ -229,7 +229,7 @@ arma::mat GetApproxKernel(arma::mat X, double iter){
 }
 
 // [[Rcpp::export]]
-arma::mat GetGaussKernel(arma::mat X, double h = 1){
+arma::mat GaussKernel(arma::mat X, double h = 1){
     int i,j;
     double n = X.n_cols;
     double p = X.n_rows;
@@ -260,6 +260,17 @@ List EigDecomp(arma::mat X){
     mat V;
     svd(U,lambda,V,X);
     return Rcpp::List::create(Rcpp::Named("U") = U,Rcpp::Named("V") = V,Rcpp::Named("lambda") = lambda);
+}
+
+// [[Rcpp::export]]
+arma::mat ComputePCs(arma::mat X,int top = 10){
+    mat U;
+    vec s;
+    mat V;
+    svd(U,s,V,X);
+    
+    mat PCs = U*diagmat(s);
+    return PCs.cols(0,top-1);
 }
 
 //================================================================================================
@@ -507,7 +518,7 @@ NumericMatrix GetPPAAs(NumericMatrix betamat, double sigval){
         double zz = j+1;
         qval(j) = sigval*(zz/p);
     }
-        
+    
     for(i=0; i<betamat.nrow(); i++){
         NumericVector PIP(p);
         vec pval = zeros(p);
