@@ -7,4 +7,4 @@ In the file BAKR_Tutorial.R, we walk through the BAKR functions. Specifically we
 
 This script is based on a simple (and small) genetics example where we simulate genotype data for n = 500 individuals with p = 2000 measured SNPs. Briefly, we randomly select a small number (e.g. 25) of these SNPs to be causal and have true association with the generated (continuous) phenotype y.
 
-In this script, it is also noted how functions change when the response variables are binary (i.e. for classification problems) instead of continuous. 
+In this script, it is also noted how functions change when the response variables are binary (i.e. for classification problems) instead of continuous. We show BAKR compares to other models in the file Model_Comparisons.R.
