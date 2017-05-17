@@ -22,9 +22,6 @@ library(Rcpp)
 library(RcppArmadillo)
 library(BGLR)
 
-### Set the working directory ###
-setwd("~/Desktop/BAKR Project/R Scripts/CPP_Scripts/")
-
 ### Load in the BAKR C++ functions from working directory ###
 sourceCpp("BAKRGibbs.cpp")
 
@@ -71,8 +68,10 @@ X_test = X[-train.idc,]; y_test = as.numeric(y[-train.idc])
 #This function takes on two arguments:
 #(1) The Genotype matrix X. This matrix should be fed in as a pxn matrix. That is, SNPs are the rows and subjects/patients/cell lines are the columns.
 #(2) The number of mcmc draws one wants to use in order to make K_tilde \approx K
-n = dim(X_train)[1]; p = dim(X_train)[2]
-K_tilde = GetApproxKernel(t(X_train),1e4) 
+
+n = dim(X)[1] #Sample size
+p = dim(X)[2] #Number of markers or genes
+K_tilde = ApproxGaussKernel(t(X_train),p,p)
 
 ### Center the Approximate Kernel Matrix for numerical stability ###
 v=matrix(1, n, 1)
@@ -82,22 +81,22 @@ Kn=Kn/mean(diag(Kn))
 
 #Use the Eigenvalue Decomposition of the Kernel matrix in order to futher reduce dimensionality as described in the paper
 #Choose the number of components that explain desired % of the cumulative variance in the data (i.e. q in the paper)
-evd = eigen(Kn)
+evd = EigDecomp(Kn)
 
-explained_var = cumsum(evd$values/sum(evd$values))
-q = 1:min(which(explained_var >= 0.75))
-Lambda = diag(evd$values[q]^(-1)) # Matrix of Eigenvalues
-U = evd$vectors[,q] # Unitary Matrix of Eigenvectors
+explained_var = cumsum(evd$lambda/sum(evd$lambda))
+q = 1:min(which(explained_var >= 0.99))
+Lambda = diag(sort(evd$lambda,decreasing = TRUE)[q]^(-1)) # Matrix of Eigenvalues
+U = evd$U[,q] # Unitary Matrix of Eigenvectors
 
 #Compute the inverse mapping used to obtain the effect sizes of the original covariates 
 B = InverseMap(t(X_train),U)
 
 #Set up the desired number of MCMC samples and burn-ins
-iter = 1e4
-burn = 5e3
+mcmc.iter = 2e3
+mcmc.burn = 1e3
 
 #Run the BAKR Gibbs Sampler. This function takes arguments: approximate kernel factor matrix (U), response (y); truncated covariance matrix (Lambda); and the number of iterations and burn-in for the MCMC. When y is binary, use the BAKRProbitGibbs() instead---it takes the same arguments. 
-Gibbs = BAKRGibbs(U,y_train,Lambda,iter,burn)
+Gibbs = BAKRGibbs(U,y_train,Lambda,mcmc.iter,mcmc.burn)
 
 #The function results in a list with MCMC samples for the kernel factor coefficients (Gibbs$theta), and the variance scale terms for theta and the random error terms (Gibbs$sigma_theta and Gibbs$sigma_e). Gibbs$sigma_e is not available when the BAKRProbitGibbs() since e ~ MVN(0,I)
 
@@ -126,6 +125,11 @@ MSPE_BAKR = mean((y_test-BAKR_pred)^2); MSPE_BAKR
 
 #Get all of the posterior draws for beta estimates. [We can then use the PostMean function to get the equivalent of beta.out in (*)] 
 beta_draws = GetBeta(B,Gibbs$theta)
+
+### Compute the Posterior Probability of Association Analog (PPAA) ###
+sigval= 0.05 #Set the desired FDR
+PPAA.out = PostMean(GetPPAAs(GetBeta(B,Gibbs$theta),sigval))
+names(PPAA.out) = colnames(X)
 
 #Compute the local false sign rates [Stephens, M. (2016). False discovery rates: A new deal. bioRxiv]. The local false sign rate is analogous to the local false discovery rate and provides a measure of confidence in the sign of an effect rather than confidence of the effect being non-zero. The lower the lfsr, the better. This function takes the beta draws from MCMC iteration. The desired significance threshold for these values maybe chosen subjectively
 LFSR = as.numeric(lfsr(beta_draws)); names(LFSR) = colnames(X)
