@@ -131,6 +131,9 @@ sigval= 0.05 #Set the desired FDR
 PPAA.out = PostMean(GetPPAAs(GetBeta(B,Gibbs$theta),sigval))
 names(PPAA.out) = colnames(X)
 
+#Check the PPAA of the causal variants 
+summary(PPAA.out); PPAA.out[s]
+
 #Compute the local false sign rates [Stephens, M. (2016). False discovery rates: A new deal. bioRxiv]. The local false sign rate is analogous to the local false discovery rate and provides a measure of confidence in the sign of an effect rather than confidence of the effect being non-zero. The lower the lfsr, the better. This function takes the beta draws from MCMC iteration. The desired significance threshold for these values maybe chosen subjectively
 LFSR = as.numeric(lfsr(beta_draws)); names(LFSR) = colnames(X)
 
