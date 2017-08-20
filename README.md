@@ -43,6 +43,9 @@ The simulation tutorial provided here is based on a simple (and small) genetics 
 
 This script also notes how functions change when the variables are binary instead of continuous.
 
+### Relevant Publications
+L. Crawford, K.C. Wood, X. Zhou, and S. Mukherjee (2017). Bayesian approximate kernel regression with variable selection. * *Journal of the American Statistical Association* *. In Press.
+
 ### Questions and Feedback
 For questions or concerns with the BAKR functions, please contact
 [Lorin Crawford](mailto:lac55@stat.duke.edu), [Xiang Zhou](mailto:xzhousph@umich.edu), or [Sayan Mukherjee](mailto:sayan@stat.duke.edu).
