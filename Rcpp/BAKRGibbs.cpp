@@ -12,54 +12,54 @@ using namespace arma;
 // [[Rcpp::export]]
 //random multivariate normal sample generator using RcppArmadillo
 arma::mat mvrnormArma(int n, arma::vec mu, arma::mat sigma) {
-    int ncols = sigma.n_cols;
-    arma::mat Y = arma::randn(n, ncols);
-    return arma::repmat(mu, 1, n).t() + Y * arma::chol(sigma);
+  int ncols = sigma.n_cols;
+  arma::mat Y = arma::randn(n, ncols);
+  return arma::repmat(mu, 1, n).t() + Y * arma::chol(sigma);
 }
 
 // [[Rcpp::export]]
 double rgammadouble(int a, double b, double c){
-    Rcpp::NumericVector x = rgamma(a,b,1/c);
-    return x(0);
+  Rcpp::NumericVector x = rgamma(a,b,1/c);
+  return x(0);
 }
 
 // [[Rcpp::export]]
 double rInvGamma(int n, double shape,double scale){
-    double x = rgammadouble(n, shape, scale);
-    return 1.0/x;
+  double x = rgammadouble(n, shape, scale);
+  return 1.0/x;
 }
 
 // [[Rcpp::export]]
 double rScaledInvChiSq(int n, double nu, double tau2){
-    double x = rInvGamma(n, nu/2,(nu * tau2)/2);
-    return x;
+  double x = rInvGamma(n, nu/2,(nu * tau2)/2);
+  return x;
 }
 
 // [[Rcpp::export]]
 double median_rcpp(NumericVector x) {
-    NumericVector y = clone(x);
-    int n, half;
-    double y1, y2;
-    n = y.size();
-    half = n / 2;
-    if(n % 2 == 1) {
-        // median for odd length vector
-        std::nth_element(y.begin(), y.begin()+half, y.end());
-        return y[half];
-    } else {
-        // median for even length vector
-        std::nth_element(y.begin(), y.begin()+half, y.end());
-        y1 = y[half];
-        std::nth_element(y.begin(), y.begin()+half-1, y.begin()+half);
-        y2 = y[half-1];
-        return (y1 + y2) / 2.0;
-    }
+  NumericVector y = clone(x);
+  int n, half;
+  double y1, y2;
+  n = y.size();
+  half = n / 2;
+  if(n % 2 == 1) {
+    // median for odd length vector
+    std::nth_element(y.begin(), y.begin()+half, y.end());
+    return y[half];
+  } else {
+    // median for even length vector
+    std::nth_element(y.begin(), y.begin()+half, y.end());
+    y1 = y[half];
+    std::nth_element(y.begin(), y.begin()+half-1, y.begin()+half);
+    y2 = y[half-1];
+    return (y1 + y2) / 2.0;
+  }
 }
 
 // [[Rcpp::export]]
 double mad_rcpp(NumericVector x, double scale_factor = 1.4826) {
-    // scale_factor = 1.4826; default for normal distribution consistent with R
-    return median_rcpp(abs(x - median_rcpp(x))) * scale_factor;
+  // scale_factor = 1.4826; default for normal distribution consistent with R
+  return median_rcpp(abs(x - median_rcpp(x))) * scale_factor;
 }
 
 // norm_rs(a, b)
@@ -248,9 +248,50 @@ arma::mat GaussKernel(arma::mat X, double h = 1){
 }
 
 // [[Rcpp::export]]
-arma::mat GetLinearKernel(arma::mat X){
+arma::mat CauchyKernel(arma::mat X, double h = 1){
+    int i,j;
+    double n = X.n_cols;
     double p = X.n_rows;
-    return trans(X)*X/p;
+    mat K = zeros<mat>(n,n);
+    for (i = 0; i<n; i++){
+        for(j = 0; j<n; j++){
+            if(i==j){
+                break;
+            }
+            else{
+                K(i,j) = 1/(1+h/(p)*sum(pow(X.col(i)-X.col(j),2)));
+            }
+        }
+    }
+    return K + trans(K);
+}
+
+// [[Rcpp::export]]
+arma::mat LogKernel(arma::mat X, double h = 1){
+    int i,j;
+    double n = X.n_cols;
+    mat K = zeros<mat>(n,n);
+    for (i = 0; i<n; i++){
+        for(j = 0; j<n; j++){
+            if(i==j){
+                break;
+            }
+            else{
+                K(i,j) = -log(sum(pow(X.col(i)-X.col(j),h))+1);
+            }
+        }
+    }
+    return K + trans(K);
+}
+
+// [[Rcpp::export]]
+arma::mat LinearKernel(arma::mat X,double h = 1){
+    return X.t()*X/h;
+}
+
+// [[Rcpp::export]]
+arma::mat SigmoidKernel(arma::mat X, double alpha = 1,double h = 1){
+    return tanh(X.t()*X/alpha+h);
 }
 
 // [[Rcpp::export]]
@@ -518,13 +559,13 @@ NumericMatrix GetPPAAs(NumericMatrix betamat, double sigval){
         double zz = j+1;
         qval(j) = sigval*(zz/p);
     }
-    
+        
     for(i=0; i<betamat.nrow(); i++){
         NumericVector PIP(p);
         vec pval = zeros(p);
         vec pvalsort = zeros(p);
         NumericVector beta = betamat.row(i);
-        double sigmahat = mad_rcpp(beta)/0.674;
+        double sigmahat = mad_rcpp(abs(beta))/0.674;
         pval = 2*(1-Rcpp::pnorm(abs(beta)/sigmahat,0.0,1.0,1,0));
         pvalsort = sort(pval);
         if(any(pvalsort<qval)){
