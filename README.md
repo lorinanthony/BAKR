@@ -48,6 +48,6 @@ L. Crawford, K.C. Wood, X. Zhou, and S. Mukherjee (2017). Bayesian approximate k
 
 ### Questions and Feedback
 For questions or concerns with the BAKR functions, please contact
-[Lorin Crawford](mailto:lac55@stat.duke.edu), [Xiang Zhou](mailto:xzhousph@umich.edu), or [Sayan Mukherjee](mailto:sayan@stat.duke.edu).
+[Lorin Crawford](mailto:lorin_crawford@brown.edu), [Xiang Zhou](mailto:xzhousph@umich.edu), or [Sayan Mukherjee](mailto:sayan@stat.duke.edu).
 
 We appreciate any feedback you may have with our repository and instructions.
