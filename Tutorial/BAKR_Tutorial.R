@@ -69,8 +69,8 @@ X_test = X[-train.idc,]; y_test = as.numeric(y[-train.idc])
 #(1) The Genotype matrix X. This matrix should be fed in as a pxn matrix. That is, SNPs are the rows and subjects/patients/cell lines are the columns.
 #(2) The number of mcmc draws one wants to use in order to make K_tilde \approx K
 
-n = dim(X)[1] #Sample size
-p = dim(X)[2] #Number of markers or genes
+n = dim(X_train)[1] #Sample size of the training set
+p = dim(X_train)[2] #Number of markers or genes
 K_tilde = ApproxGaussKernel(t(X_train),p,p)
 
 ### Center the Approximate Kernel Matrix for numerical stability ###
