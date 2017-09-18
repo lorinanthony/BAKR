@@ -32,7 +32,7 @@ The easiest method to install these packages is with the following example comma
 Alternatively, one can also [install R packages from the command line](http://cran.r-project.org/doc/manuals/r-release/R-admin.html#Installing-packages).
 
 ### C++ Functions Required for BAKR
-The code in this repository assumes that basic C++ functions and applications are already set up on the running personal computer or cluster. If not, the BAKR functions and necessary Rcpp packages will not work properly. A simple option is to use [gcc] (https://gcc.gnu.org/). macOS users may use this collection by installing the [Homebrew package manager](http://brew.sh/index.html) and then typing the following into the terminal:
+The code in this repository assumes that basic C++ functions and applications are already set up on the running personal computer or cluster. If not, the BAKR functions and necessary Rcpp packages will not work properly. A simple option is to use [gcc](https://gcc.gnu.org/). macOS users may use this collection by installing the [Homebrew package manager](http://brew.sh/index.html) and then typing the following into the terminal:
 
     brew install gcc
 
