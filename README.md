@@ -46,6 +46,8 @@ This script also notes how functions change when the variables are binary instea
 ### Relevant Publications
 L. Crawford, K.C. Wood, X. Zhou, and S. Mukherjee (2017). Bayesian approximate kernel regression with variable selection. *Journal of the American Statistical Association*. In Press.
 
+K.R. Singleton*, L. Crawford*, E. Tsui, H.E. Manchester, O. Maertens, X. Liu, M.V. Liberti, A.N. Magpusao, E.M. Stein, J.P. Tingley, D.T. Frederick, G.M. Boland, K.T. Flaherty, S.J. McCall, C. Krepler, K. Sproesser, M. Herlyn, D.J. Adams, J.W. Locasale, K. Cichowski, S. Mukherjee, K.C. Wood (2017). Melanoma therapeutic strategies that select against resistance by exploiting MYC-driven evolutionary convergence. *Cell Reports*. **21**(10): 2796-2812.
+
 ### Questions and Feedback
 For questions or concerns with the BAKR functions, please contact
 [Lorin Crawford](mailto:lorin_crawford@brown.edu), [Xiang Zhou](mailto:xzhousph@umich.edu), or [Sayan Mukherjee](mailto:sayan@stat.duke.edu).
