@@ -13,7 +13,7 @@ library(RcppArmadillo)
 library(BGLR)
 
 ### Load in the BAKR C++ functions from working directory ###
-sourceCpp("~/Dropbox/Desktop/BAKR Project/Analysis/R Scripts/CPP_Scripts/BAKRGibbs.cpp")
+sourceCpp("BAKRGibbs.cpp")
 
 ######################################################################################
 ######################################################################################
