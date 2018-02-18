@@ -137,3 +137,18 @@ BAKR_pred = BAKRPredict(t(X_test),beta.out)
 
 #Check the predictive performance---in this case, mean square prediction error (MSPE)
 MSPE_BAKR = mean((y_test-BAKR_pred)^2); MSPE_BAKR
+
+######################################################################################
+######################################################################################
+######################################################################################
+
+### Inference in the BAKR framework ###
+
+#Get all of the posterior draws for beta estimates. [We can then use the PostMean function to get the equivalent of beta.out in (*)] 
+beta_draws = GetBeta(B,Gibbs$theta)
+
+#Compute the local false sign rates [Stephens, M. (2017). False discovery rates: A new deal. Biostatistics]. The local false sign rate is analogous to the local false discovery rate and provides a measure of confidence in the sign of an effect rather than confidence of the effect being non-zero. The lower the lfsr, the better. This function takes the beta draws from MCMC iteration. The desired significance threshold for these values maybe chosen subjectively
+LFSR = as.numeric(lfsr(beta_draws)); names(LFSR) = colnames(X)
+
+#Check the lfsr of the causal variants 
+summary(LFSR); LFSR[s]
